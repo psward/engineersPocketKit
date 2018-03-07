@@ -341,9 +341,9 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                           }
 
                           double res = normv1[0]*normv2[0] + normv1[1] * normv2[1] + normv1[2] * normv2[2];
-                          final double finalAngle = Math.acos(res);
+                          double finalAngle = Math.acos(res);
                           System.out.println(Math.toDegrees(finalAngle));
-                          
+                          updateTextView(Double.toString(Math.toDegrees(finalAngle)));
 
                           /*
                           double p1top2 = Math.sqrt((Math.pow(ax-bx, 2))+(Math.pow(ay-by, 2))+(Math.pow(az-bz, 2)));
@@ -479,5 +479,15 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                 mMessageSnackbar = null;
             }
         });
+    }
+    private void updateTextView(final String s) {
+      HelloArActivity.this.runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          TextView tv= (TextView) findViewById(R.id.degrees);
+          tv.setText(s);
+        }
+      });
+
     }
 }
