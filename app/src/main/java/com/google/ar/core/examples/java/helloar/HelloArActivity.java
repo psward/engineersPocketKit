@@ -27,6 +27,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.TextView;
 import android.widget.Toast;
 import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
@@ -47,10 +48,14 @@ import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
+import com.google.ar.core.Pose;
+import com.google.ar.core.HitResult;
 
 /**
  * This is a simple example that shows how to create an augmented reality (AR) application using the
@@ -228,11 +233,11 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
         try {
             mVirtualObject.createOnGlThread(/*context=*/this, "andy.obj", "andy.png");
             mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
-
             mVirtualObjectShadow.createOnGlThread(/*context=*/this,
-                "andy_shadow.obj", "andy_shadow.png");
-            mVirtualObjectShadow.setBlendMode(BlendMode.Shadow);
-            mVirtualObjectShadow.setMaterialProperties(1.0f, 0.0f, 0.0f, 1.0f);
+                "andy_shadow.obj", "CircleT.png");
+            mVirtualObjectShadow.setBlendMode(BlendMode.Grid);
+            mVirtualObjectShadow.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+            System.out.println("Object Created");
         } catch (IOException e) {
             Log.e(TAG, "Failed to read obj file");
         }
@@ -280,7 +285,7 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                             && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
                         // Cap the number of objects created. This avoids overloading both the
                         // rendering system and ARCore.
-                        if (mAnchors.size() >= 20) {
+                        if (mAnchors.size() >= 3) {
                             mAnchors.get(0).detach();
                             mAnchors.remove(0);
                         }
@@ -289,7 +294,75 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                         // in the correct position relative both to the world and to the plane.
                         mAnchors.add(hit.createAnchor());
 
-                        // Hits are sorted by depth. Consider only closest hit on a plane.
+                        if(mAnchors.size() == 1){
+                          System.out.println(mAnchors.get(0).getPose());
+                        } else if (mAnchors.size() == 2){
+                          double ax = mAnchors.get(0).getPose().tx();
+                          double ay = mAnchors.get(0).getPose().ty();
+                          double az = mAnchors.get(0).getPose().tz();
+
+                          double bx = mAnchors.get(1).getPose().tx();
+                          double by = mAnchors.get(1).getPose().ty();
+                          double bz = mAnchors.get(1).getPose().tz();
+
+                          double p1top2 = Math.sqrt((Math.pow(ax-bx, 2))+(Math.pow(ay-by, 2))+(Math.pow(az-bz, 2)));
+
+                        } else {
+                          double ax = mAnchors.get(0).getPose().tx();
+                          double ay = mAnchors.get(0).getPose().ty();
+                          double az = mAnchors.get(0).getPose().tz();
+
+                          double bx = mAnchors.get(1).getPose().tx();
+                          double by = mAnchors.get(1).getPose().ty();
+                          double bz = mAnchors.get(1).getPose().tz();
+
+                          double cx = mAnchors.get(2).getPose().tx();
+                          double cy = mAnchors.get(2).getPose().ty();
+                          double cz = mAnchors.get(2).getPose().tz();
+
+                          double[] v1 = {ax-bx, ay-by, az-bz};
+                          double[] v2 = {cx-bx, cy-by, cz-bz};
+
+                          double sumv1 = 0;
+                          double sumv2 = 0;
+                          for(int i = 0; i < v1.length; i++){
+                            sumv1 += Math.pow(v1[i], 2);
+                            sumv2 += Math.pow(v2[i], 2);
+                          }
+                          double magV1 = Math.sqrt(sumv1);
+                          double magV2 = Math.sqrt(sumv2);
+
+                          double normv1[] = new double[3];
+                          double normv2[] = new double[3];
+
+                          for(int i = 0; i < v1.length; i++){
+                            normv1[i] = (v1[i]/ magV1);
+                            normv2[i] = (v2[i]/ magV2);
+                          }
+
+                          double res = normv1[0]*normv2[0] + normv1[1] * normv2[1] + normv1[2] * normv2[2];
+                          final double finalAngle = Math.acos(res);
+                          System.out.println(Math.toDegrees(finalAngle));
+                          
+
+                          /*
+                          double p1top2 = Math.sqrt((Math.pow(ax-bx, 2))+(Math.pow(ay-by, 2))+(Math.pow(az-bz, 2)));
+                          double p2top3 = Math.sqrt((Math.pow(bx-cx, 2))+(Math.pow(by-cy, 2))+(Math.pow(bz-cz, 2)));
+
+                          double angleTop = p1top2 * p2top3;
+                          double angleBottom = Math.abs(p1top2) * Math.abs(p2top3);
+                          double divisionAngle = angleTop/angleBottom;
+                          double finalAngle = Math.acos(divisionAngle);
+
+                          System.out.println(p1top2);
+                          System.out.println(p2top3);
+                          System.out.println(angleTop);
+                          System.out.println(angleBottom);
+                          System.out.println(divisionAngle);
+                          System.out.println(finalAngle);
+                          */
+
+                        }
                         break;
                     }
                 }
