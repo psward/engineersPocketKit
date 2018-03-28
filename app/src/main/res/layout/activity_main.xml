@@ -46,11 +46,13 @@
         android:layout_marginTop="140dp"
         android:text="Calculate" />
 
-    <android.opengl.GLSurfaceView
-        android:id="@+id/surfaceview"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:layout_gravity="top" />
+  <android.opengl.GLSurfaceView
+    android:id="@+id/surfaceview"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:layout_alignParentStart="true"
+    android:layout_alignParentTop="true"
+    android:layout_gravity="top" />
 
   <TextView
     android:id="@+id/degrees"
@@ -59,6 +61,23 @@
     android:layout_alignParentEnd="true"
     android:layout_alignTop="@+id/Length"
     android:layout_marginEnd="19dp"
-    android:text="TextView" />
+    android:text="Degree" />
+
+  <TextView
+    android:id="@+id/distanceLength"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_alignStart="@+id/degrees"
+    android:layout_below="@+id/Length"
+    android:text="Length" />
+
+  <Button
+    android:id="@+id/resetButton"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_alignEnd="@+id/degrees"
+    android:layout_alignParentBottom="true"
+    android:layout_marginBottom="21dp"
+    android:text="Reset" />
 
 </RelativeLayout>

@@ -18,6 +18,7 @@ package com.google.ar.core.examples.java.helloar;
 
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.opengl.*;
 import android.os.Bundle;
 import android.support.design.widget.BaseTransientBottomBar;
 import android.support.design.widget.Snackbar;
@@ -27,6 +28,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.google.ar.core.Anchor;
@@ -48,14 +50,12 @@ import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import javax.microedition.khronos.egl.EGLConfig;
+import javax.microedition.khronos.opengles.GL;
 import javax.microedition.khronos.opengles.GL10;
-import com.google.ar.core.Pose;
-import com.google.ar.core.HitResult;
 
 /**
  * This is a simple example that shows how to create an augmented reality (AR) application using the
@@ -229,6 +229,7 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
             mSession.setCameraTextureName(mBackgroundRenderer.getTextureId());
         }
 
+
         // Prepare the other rendering objects.
         try {
             mVirtualObject.createOnGlThread(/*context=*/this, "andy.obj", "andy.png");
@@ -266,6 +267,7 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
         // Notify ARCore session that the view size changed so that the perspective matrix and
         // the video background can be properly adjusted.
         mDisplayRotationHelper.updateSessionIfNeeded(mSession);
+      Button resetButton = (Button) findViewById(R.id.resetButton);
 
         try {
             // Obtain the current frame from ARSession. When the configuration is set to
@@ -273,12 +275,18 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
             // camera framerate.
             Frame frame = mSession.update();
             Camera camera = frame.getCamera();
+            final HitResult hrArray[] = new HitResult[3];
 
             // Handle taps. Handling only one tap per frame, as taps are usually low frequency
             // compared to frame rate.
             MotionEvent tap = mQueuedSingleTaps.poll();
+            int it = 0;
             if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
                 for (HitResult hit : frame.hitTest(tap)) {
+                  if(it < 3) {
+                    hrArray[it] = hit;
+                    it += 1;
+                  }
                     // Check if any plane was hit, and if it was hit inside the plane polygon
                     Trackable trackable = hit.getTrackable();
                     if (trackable instanceof Plane
@@ -293,38 +301,69 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                         // space. This anchor is created on the Plane to place the 3d model
                         // in the correct position relative both to the world and to the plane.
                         mAnchors.add(hit.createAnchor());
-
+                        resetButton.setOnClickListener(new View.OnClickListener()
+                        {
+                          @Override
+                          public void onClick(View v)
+                          {
+                            mAnchors.clear();
+                            Arrays.fill(hrArray, null);
+                            updateDegreeTextView("Degree");
+                            updateLengthTextView("Length");
+                          }
+                        });
                         if(mAnchors.size() == 1){
                           System.out.println(mAnchors.get(0).getPose());
                         } else if (mAnchors.size() == 2){
-                          double ax = mAnchors.get(0).getPose().tx();
-                          double ay = mAnchors.get(0).getPose().ty();
-                          double az = mAnchors.get(0).getPose().tz();
+                          float ax = mAnchors.get(0).getPose().tx();
+                          float ay = mAnchors.get(0).getPose().ty();
+                          float az = mAnchors.get(0).getPose().tz();
 
-                          double bx = mAnchors.get(1).getPose().tx();
-                          double by = mAnchors.get(1).getPose().ty();
-                          double bz = mAnchors.get(1).getPose().tz();
+                          float bx = mAnchors.get(1).getPose().tx();
+                          float by = mAnchors.get(1).getPose().ty();
+                          float bz = mAnchors.get(1).getPose().tz();
 
-                          double p1top2 = Math.sqrt((Math.pow(ax-bx, 2))+(Math.pow(ay-by, 2))+(Math.pow(az-bz, 2)));
+                          float[] directionVector = {bx-ax, by-ay, bz-az};
+                          float scaleFactor = 1.0f;
+                          final float lightIntensity = frame.getLightEstimate().getPixelIntensity();
+                          float[] projmtx = new float[16];
+                          camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
+                          for(float t = 0; t <= 1; t+=0.1) {
+                            float lineEquation[] = {ax + directionVector[0] * t, ay + directionVector[1] * t, az + directionVector[2] * t};
+                            System.out.println(Arrays.toString(lineEquation));
+                            mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
+                            mVirtualObjectShadow.updateModelMatrix(mAnchorMatrix, scaleFactor);
+                          }
+                          System.out.println(Arrays.toString(projmtx));
+                          System.out.println(ax + " " + ay + " " + az);
+                          System.out.println(bx + " " + by + " " + bz);
+
+                          float dx = mAnchors.get(0).getPose().tx() - hrArray[0].getHitPose().tx();
+                          float dy = mAnchors.get(0).getPose().ty() - hrArray[0].getHitPose().ty();
+                          float dz = mAnchors.get(0).getPose().tz() - hrArray[0].getHitPose().tz();
+                          float distanceMeters = (float) Math.sqrt(dx*dx + dy*dy + dz*dz);
+                          System.out.println(distanceMeters);
+                          updateLengthTextView(Float.toString(distanceMeters));
+
 
                         } else {
-                          double ax = mAnchors.get(0).getPose().tx();
-                          double ay = mAnchors.get(0).getPose().ty();
-                          double az = mAnchors.get(0).getPose().tz();
+                          float ax = mAnchors.get(0).getPose().tx();
+                          float ay = mAnchors.get(0).getPose().ty();
+                          float az = mAnchors.get(0).getPose().tz();
 
-                          double bx = mAnchors.get(1).getPose().tx();
-                          double by = mAnchors.get(1).getPose().ty();
-                          double bz = mAnchors.get(1).getPose().tz();
+                          float bx = mAnchors.get(1).getPose().tx();
+                          float by = mAnchors.get(1).getPose().ty();
+                          float bz = mAnchors.get(1).getPose().tz();
 
-                          double cx = mAnchors.get(2).getPose().tx();
-                          double cy = mAnchors.get(2).getPose().ty();
-                          double cz = mAnchors.get(2).getPose().tz();
+                          float cx = mAnchors.get(2).getPose().tx();
+                          float cy = mAnchors.get(2).getPose().ty();
+                          float cz = mAnchors.get(2).getPose().tz();
 
-                          double[] v1 = {ax-bx, ay-by, az-bz};
-                          double[] v2 = {cx-bx, cy-by, cz-bz};
+                          float[] v1 = {ax-bx, ay-by, az-bz};
+                          float[] v2 = {cx-bx, cy-by, cz-bz};
 
-                          double sumv1 = 0;
-                          double sumv2 = 0;
+                          float sumv1 = 0;
+                          float sumv2 = 0;
                           for(int i = 0; i < v1.length; i++){
                             sumv1 += Math.pow(v1[i], 2);
                             sumv2 += Math.pow(v2[i], 2);
@@ -332,35 +371,18 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                           double magV1 = Math.sqrt(sumv1);
                           double magV2 = Math.sqrt(sumv2);
 
-                          double normv1[] = new double[3];
-                          double normv2[] = new double[3];
+                          float normv1[] = new float[3];
+                          float normv2[] = new float[3];
 
                           for(int i = 0; i < v1.length; i++){
-                            normv1[i] = (v1[i]/ magV1);
-                            normv2[i] = (v2[i]/ magV2);
+                            normv1[i] = (float) (v1[i]/ magV1);
+                            normv2[i] = (float) (v2[i]/ magV2);
                           }
 
-                          double res = normv1[0]*normv2[0] + normv1[1] * normv2[1] + normv1[2] * normv2[2];
-                          double finalAngle = Math.acos(res);
+                          float res = normv1[0]*normv2[0] + normv1[1] * normv2[1] + normv1[2] * normv2[2];
+                          float finalAngle = (float) Math.acos(res);
                           System.out.println(Math.toDegrees(finalAngle));
-                          updateTextView(Double.toString(Math.toDegrees(finalAngle)));
-
-                          /*
-                          double p1top2 = Math.sqrt((Math.pow(ax-bx, 2))+(Math.pow(ay-by, 2))+(Math.pow(az-bz, 2)));
-                          double p2top3 = Math.sqrt((Math.pow(bx-cx, 2))+(Math.pow(by-cy, 2))+(Math.pow(bz-cz, 2)));
-
-                          double angleTop = p1top2 * p2top3;
-                          double angleBottom = Math.abs(p1top2) * Math.abs(p2top3);
-                          double divisionAngle = angleTop/angleBottom;
-                          double finalAngle = Math.acos(divisionAngle);
-
-                          System.out.println(p1top2);
-                          System.out.println(p2top3);
-                          System.out.println(angleTop);
-                          System.out.println(angleBottom);
-                          System.out.println(divisionAngle);
-                          System.out.println(finalAngle);
-                          */
+                          updateDegreeTextView(Double.toString(Math.toDegrees(finalAngle)));
 
                         }
                         break;
@@ -424,8 +446,8 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                 // Update and draw the model and its shadow.
                 mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
                 mVirtualObjectShadow.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
-                mVirtualObjectShadow.draw(viewmtx, projmtx, lightIntensity);
+                //mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
+                //mVirtualObjectShadow.draw(viewmtx, projmtx, lightIntensity);
             }
 
         } catch (Throwable t) {
@@ -480,7 +502,7 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
             }
         });
     }
-    private void updateTextView(final String s) {
+    private void updateDegreeTextView(final String s) {
       HelloArActivity.this.runOnUiThread(new Runnable() {
         @Override
         public void run() {
@@ -489,5 +511,17 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
         }
       });
 
+
     }
+  private void updateLengthTextView(final String s) {
+    HelloArActivity.this.runOnUiThread(new Runnable() {
+      @Override
+      public void run() {
+        TextView tv= (TextView) findViewById(R.id.distanceLength);
+        tv.setText(s);
+      }
+    });
+
+
+  }
 }
