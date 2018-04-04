@@ -323,6 +323,8 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                           float by = mAnchors.get(1).getPose().ty();
                           float bz = mAnchors.get(1).getPose().tz();
 
+
+
                           float[] directionVector = {bx-ax, by-ay, bz-az};
                           float scaleFactor = 1.0f;
                           final float lightIntensity = frame.getLightEstimate().getPixelIntensity();
@@ -444,10 +446,8 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                 anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
                 // Update and draw the model and its shadow.
-                mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
                 mVirtualObjectShadow.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                //mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
-                //mVirtualObjectShadow.draw(viewmtx, projmtx, lightIntensity);
+                mVirtualObjectShadow.draw(viewmtx, projmtx, lightIntensity);
             }
 
         } catch (Throwable t) {
