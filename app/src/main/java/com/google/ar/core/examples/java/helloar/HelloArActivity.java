@@ -18,7 +18,6 @@ package com.google.ar.core.examples.java.helloar;
 
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
-import android.opengl.*;
 import android.os.Bundle;
 import android.support.design.widget.BaseTransientBottomBar;
 import android.support.design.widget.Snackbar;
@@ -54,8 +53,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL;
 import javax.microedition.khronos.opengles.GL10;
+
 
 /**
  * This is a simple example that shows how to create an augmented reality (AR) application using the
@@ -85,6 +84,7 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
     // Tap handling and UI.
     private final ArrayBlockingQueue<MotionEvent> mQueuedSingleTaps = new ArrayBlockingQueue<>(16);
     private final ArrayList<Anchor> mAnchors = new ArrayList<>();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -293,7 +293,7 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                             && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
                         // Cap the number of objects created. This avoids overloading both the
                         // rendering system and ARCore.
-                        if (mAnchors.size() >= 3) {
+                        if (mAnchors.size() >= 4) { // LIMIT ANCHORS ON PLANE
                             mAnchors.get(0).detach();
                             mAnchors.remove(0);
                         }
@@ -315,6 +315,13 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                         if(mAnchors.size() == 1){
                           System.out.println(mAnchors.get(0).getPose());
                         } else if (mAnchors.size() == 2){
+                          float [] p1 = {mAnchors.get(0).getPose().tx(), mAnchors.get(0).getPose().ty(), mAnchors.get(0).getPose().tz()};
+                          float [] p2 = {mAnchors.get(1).getPose().tx(), mAnchors.get(1).getPose().ty(), mAnchors.get(1).getPose().tz()};
+                          MathHelpers mh = new MathHelpers();
+                          mAnchors.add(hit.getTrackable().createAnchor(hit.getHitPose().compose(mh.rotateBetween(p1, p2))));
+                          float [] transFrom = mAnchors.get(2).getPose().getTransformedAxis(2, 10f);
+                          mAnchors.get(2).getPose().transformPoint(transFrom);
+
                           float ax = mAnchors.get(0).getPose().tx();
                           float ay = mAnchors.get(0).getPose().ty();
                           float az = mAnchors.get(0).getPose().tz();
@@ -322,23 +329,6 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                           float bx = mAnchors.get(1).getPose().tx();
                           float by = mAnchors.get(1).getPose().ty();
                           float bz = mAnchors.get(1).getPose().tz();
-
-
-
-                          float[] directionVector = {bx-ax, by-ay, bz-az};
-                          float scaleFactor = 1.0f;
-                          final float lightIntensity = frame.getLightEstimate().getPixelIntensity();
-                          float[] projmtx = new float[16];
-                          camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
-                          for(float t = 0; t <= 1; t+=0.1) {
-                            float lineEquation[] = {ax + directionVector[0] * t, ay + directionVector[1] * t, az + directionVector[2] * t};
-                            System.out.println(Arrays.toString(lineEquation));
-                            mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                            mVirtualObjectShadow.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                          }
-                          System.out.println(Arrays.toString(projmtx));
-                          System.out.println(ax + " " + ay + " " + az);
-                          System.out.println(bx + " " + by + " " + bz);
 
                           float dx = mAnchors.get(0).getPose().tx() - hrArray[0].getHitPose().tx();
                           float dy = mAnchors.get(0).getPose().ty() - hrArray[0].getHitPose().ty();
@@ -448,6 +438,7 @@ public class HelloArActivity extends AppCompatActivity implements GLSurfaceView.
                 // Update and draw the model and its shadow.
                 mVirtualObjectShadow.updateModelMatrix(mAnchorMatrix, scaleFactor);
                 mVirtualObjectShadow.draw(viewmtx, projmtx, lightIntensity);
+
             }
 
         } catch (Throwable t) {
